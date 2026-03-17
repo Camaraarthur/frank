@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { FrankHeader } from "@/components/FrankHeader";
 import { BECKTON_ANALYSIS, BECKTON_PROPOSALS } from "@/lib/becktonData";
 import { useState } from "react";
+import dynamic from "next/dynamic";
+
+const ClickableMap = dynamic(() => import("@/components/ClickableMap").then((m) => m.ClickableMap), { ssr: false });
 
 export default function HomePage() {
   const router = useRouter();
@@ -50,6 +53,15 @@ export default function HomePage() {
               Research
             </button>
           </div>
+        </section>
+
+        {/* Clickable world map */}
+        <section style={{ marginBottom: 48 }}>
+          <p style={{ fontSize: 12, color: "#B3B3B3", textAlign: "center", marginBottom: 8 }}>or click anywhere on the map</p>
+          <ClickableMap onLocationSelect={(lat, lng, name) => {
+            const slug = encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-"));
+            router.push(`/briefing/${slug}`);
+          }} />
         </section>
 
         {/* The one-liner */}

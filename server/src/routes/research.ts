@@ -206,15 +206,19 @@ Return ONLY a JSON object with this exact structure (no markdown, no explanation
   "interviewThemes": ["specific theme tied to real issues found", "theme 2", "theme 3", "theme 4", "theme 5"]
 }
 
-CRITICAL requirements for governingBodies:
-- Build a COMPLETE tree from the smallest local unit up to national head of state
-- Include EVERY level: neighborhood/ward council, city council/board of supervisors (ALL members for the district), mayor, county, state legislature (both chambers), governor, federal representatives (house + senate), president/PM
-- Also include: district attorney, city attorney, sheriff, school board, transit authority, planning commission — any body that makes decisions affecting residents
-- Each entry must have the CURRENT person's name (from the search results, not from memory)
-- For each representative, include their term dates if known (e.g. "since 2020" or "2022-2026")
-- Do NOT add "(verify)" or "(unverified)" — only include names you found in the search results
-- For city councils with multiple members, list the one(s) representing THIS specific area/district
-- Minimum 10 governing bodies for any city, minimum 15 for large cities
+CRITICAL requirements for governingBodies — ORDER: MOST LOCAL FIRST, national LAST:
+- START with the person who governs THIS SPECIFIC AREA (mayor, ward councillor, neighborhood president)
+- Then list ALL sub-divisions within this area (ALL wards, ALL districts, ALL neighborhoods/circoscrizioni with their leaders)
+- Then go UP: county/metropolitan, regional/state, national
+- For cities with districts/neighborhoods: list EVERY district/neighborhood with its leader, not just one
+  - Turin has 8 circoscrizioni — list all 8
+  - London boroughs have wards — list all wards in the area
+  - US cities have districts — list all relevant ones
+- Include: transit authority CEO, police chief, health authority, planning, school board
+- National president/PM goes LAST — the user searched for a LOCAL area
+- Each entry must have current name, party, term dates (e.g. "since 2020"), and officialUrl if found in search results
+- Do NOT add "(verify)" or "(unverified)" — only include names from search results
+- Minimum 15 governing bodies for any city, minimum 20 for large cities with many subdivisions
 
 Other requirements:
 - Contested issues must be grounded in the search results — cite the source URL

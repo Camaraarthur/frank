@@ -71,15 +71,23 @@ export function FrankHeader({ area, section, showRecord = true }: FrankHeaderPro
         )}
       </div>
 
-      {showRecord && area && !searching && (
-        <button
-          onClick={() => router.push(`/record?area=${encodeURIComponent(area)}`)}
-          style={{ fontSize: 13, color: "#C41E1E", background: "none", border: "1px solid #E0E0E0", padding: "6px 16px", cursor: "pointer", borderRadius: 0, display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginLeft: 12 }}
-        >
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#C41E1E", display: "inline-block" }} />
-          Record
-        </button>
-      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 12 }}>
+        {!searching && (
+          <button onClick={() => router.push("/")}
+            style={{ fontSize: 13, color: "#6B6B6B", background: "none", border: "none", cursor: "pointer" }}>
+            What is Frank?
+          </button>
+        )}
+        {showRecord && area && !searching && (
+          <button
+            onClick={() => router.push(`/record?area=${encodeURIComponent(area)}`)}
+            style={{ fontSize: 13, color: "#C41E1E", background: "none", border: "1px solid #E0E0E0", padding: "6px 16px", cursor: "pointer", borderRadius: 0, display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#C41E1E", display: "inline-block" }} />
+            Record voices
+          </button>
+        )}
+      </div>
     </header>
   );
 }

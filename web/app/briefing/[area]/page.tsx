@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { CivicDataPanel } from "@/components/CivicDataPanel";
 import { FrankHeader } from "@/components/FrankHeader";
 import { researchArea } from "@/lib/api";
+import dynamic from "next/dynamic";
+
+const BriefingMap = dynamic(() => import("@/components/BriefingMap").then(m => m.BriefingMap), { ssr: false });
 import type { AreaBriefing } from "@/lib/api";
 
 interface LoadingStep {
@@ -193,59 +196,112 @@ export default function BriefingPage() {
           ))}
         </div>
 
-        {/* Civic data — loads immediately if we have a postcode */}
-        {geo && (
-          <section style={{ marginBottom: 32 }}>
-            <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Official data</p>
-            <CivicDataPanel postcode={geo.postcode || undefined} lat={geo.lat} lng={geo.lng} />
-          </section>
-        )}
-
-        {/* Briefing content — loads after deep research */}
+        {/* Briefing content — summary first, then structure */}
         {briefing && (
           <>
-            {/* Summary */}
+            {/* Summary — the bio of the place */}
             <section style={{ marginBottom: 32 }}>
-              <p style={{ fontSize: 14, color: "#404040", lineHeight: 1.6 }}>{briefing.summary}</p>
+              <p style={{ fontSize: 15, color: "#1A1A1A", lineHeight: 1.7, marginBottom: 16 }}>{briefing.summary}</p>
+              {/* Map */}
+              {geo && (
+                <div style={{ height: 300, border: "1px solid #E0E0E0", marginBottom: 8 }}>
+                  <BriefingMap lat={geo.lat} lng={geo.lng} areaName={areaName} />
+                </div>
+              )}
             </section>
 
-            {/* Governing bodies */}
+            {/* Governing bodies — hierarchical, national at top */}
             {briefing.governingBodies.length > 0 && (
               <section style={{ marginBottom: 32 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Governing bodies</p>
-                <div style={{ borderTop: "1px solid #E0E0E0" }}>
-                  {briefing.governingBodies.map((gov, i) => (
-                    <div key={i} style={{ padding: "8px 0", borderBottom: "1px solid #E0E0E0" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 14, fontWeight: 500 }}>{gov.name}</span>
-                        <span className="font-mono" style={{ fontSize: 11, color: "#6B6B6B" }}>{gov.level}</span>
+                <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>Who governs this area</p>
+                {(() => {
+                  const levelOrder = ["neighborhood", "ward", "city", "county", "regional", "state", "national"];
+                  const sorted = [...briefing.governingBodies].sort((a, b) => {
+                    const aIdx = levelOrder.indexOf(a.level.toLowerCase()) === -1 ? 3 : levelOrder.indexOf(a.level.toLowerCase());
+                    const bIdx = levelOrder.indexOf(b.level.toLowerCase()) === -1 ? 3 : levelOrder.indexOf(b.level.toLowerCase());
+                    return aIdx - bIdx;
+                  });
+                  let currentLevel = "";
+                  return sorted.map((gov, i) => {
+                    const showLevel = gov.level.toLowerCase() !== currentLevel;
+                    currentLevel = gov.level.toLowerCase();
+                    const indent = levelOrder.indexOf(currentLevel);
+                    const depth = indent === -1 ? 2 : Math.min(indent, 4);
+                    const officialUrl = (gov as unknown as Record<string, string>).officialUrl as string | undefined;
+
+                    return (
+                      <div key={i} style={{ paddingLeft: depth * 12, marginBottom: 2 }}>
+                        {showLevel && (
+                          <p className="font-mono" style={{ fontSize: 11, color: "#B3B3B3", marginTop: i > 0 ? 12 : 0, marginBottom: 4, textTransform: "uppercase" }}>
+                            {gov.level}
+                          </p>
+                        )}
+                        <div style={{ padding: "6px 0", borderLeft: "2px solid #E0E0E0", paddingLeft: 12 }}>
+                          <p style={{ fontSize: 14 }}>
+                            {officialUrl ? (
+                              <a href={officialUrl} target="_blank" rel="noopener" style={{ color: "#1A1A1A", fontWeight: 500, textDecoration: "underline", textUnderlineOffset: 2 }}>
+                                {gov.name}
+                              </a>
+                            ) : (
+                              <span style={{ fontWeight: 500 }}>{gov.name}</span>
+                            )}
+                          </p>
+                          <p style={{ fontSize: 13, color: "#404040" }}>
+                            {gov.representative}{gov.party ? ` (${gov.party})` : ""}
+                          </p>
+                          {(gov as unknown as Record<string, string>).termDates && (
+                            <p className="font-mono" style={{ fontSize: 11, color: "#B3B3B3" }}>
+                              {(gov as unknown as Record<string, string>).termDates}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <p style={{ fontSize: 13, color: "#6B6B6B" }}>{gov.representative}{gov.party ? ` (${gov.party})` : ""}</p>
-                    </div>
-                  ))}
-                </div>
+                    );
+                  });
+                })()}
               </section>
             )}
 
-            {/* Contested issues */}
+            {/* Official data from APIs */}
+            {geo && (
+              <section style={{ marginBottom: 32 }}>
+                <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Official data</p>
+                <CivicDataPanel postcode={geo.postcode || undefined} lat={geo.lat} lng={geo.lng} />
+              </section>
+            )}
+
+            {/* Issues — with clickable sources */}
             {briefing.contestedIssues.length > 0 && (
               <section style={{ marginBottom: 32 }}>
                 <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Known issues</p>
                 {briefing.contestedIssues.map((issue, i) => (
-                  <div key={i} style={{ borderLeft: `2px solid ${issue.severity === "high" ? "#C41E1E" : "#E0E0E0"}`, paddingLeft: 16, marginBottom: 8, paddingTop: 8, paddingBottom: 8 }}>
+                  <div key={i} style={{ borderLeft: `2px solid ${issue.severity === "high" ? "#C41E1E" : "#E0E0E0"}`, paddingLeft: 16, marginBottom: 12, paddingTop: 8, paddingBottom: 8 }}>
                     <p style={{ fontSize: 14, fontWeight: 500 }}>{issue.title}</p>
-                    <p style={{ fontSize: 13, color: "#404040", marginTop: 4 }}>{issue.description}</p>
+                    <p style={{ fontSize: 13, color: "#404040", marginTop: 4, lineHeight: 1.6 }}>{issue.description}</p>
                     {issue.sources.length > 0 && (
-                      <p className="font-mono" style={{ fontSize: 11, color: "#B3B3B3", marginTop: 4 }}>
-                        {issue.sources.join(" · ")}
-                      </p>
+                      <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
+                        {issue.sources.map((src, si) => {
+                          const isUrl = src.startsWith("http");
+                          return isUrl ? (
+                            <a key={si} href={src} target="_blank" rel="noopener"
+                              style={{ fontSize: 11, color: "#C41E1E", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                              {new URL(src).hostname.replace("www.", "")}
+                            </a>
+                          ) : (
+                            <a key={si} href={`https://www.google.com/search?q=${encodeURIComponent(src)}`} target="_blank" rel="noopener"
+                              style={{ fontSize: 11, color: "#C41E1E", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                              {src}
+                            </a>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 ))}
               </section>
             )}
 
-            {/* Interview themes + CTA */}
+            {/* Interview themes */}
             {briefing.interviewThemes.length > 0 && (
               <section style={{ marginBottom: 32 }}>
                 <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Suggested interview angles</p>
@@ -257,7 +313,7 @@ export default function BriefingPage() {
               </section>
             )}
 
-            {/* No interviews yet notice */}
+            {/* CTA */}
             <section style={{ borderTop: "1px solid #E0E0E0", paddingTop: 24, textAlign: "center" }}>
               <p style={{ fontSize: 13, color: "#6B6B6B", marginBottom: 12 }}>
                 No interviews recorded for this area yet.

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BECKTON_ANALYSIS, BECKTON_PROPOSALS, BECKTON_BRIEFING } from "@/lib/becktonData";
+import { BECKTON_MAP_POINTS, BECKTON_MAP_SUMMARY } from "@/lib/becktonMapPoints";
 import { CivicDataPanel } from "@/components/CivicDataPanel";
 import { FrankHeader } from "@/components/FrankHeader";
 import dynamic from "next/dynamic";
 
-const AreaMap = dynamic(() => import("@/components/AreaMap").then((m) => m.AreaMap), { ssr: false });
+const CivicMap = dynamic(() => import("@/components/CivicMap").then((m) => m.CivicMap), { ssr: false });
 
 type Tab = "overview" | "issues" | "data" | "proposals";
 
@@ -16,6 +17,8 @@ export default function BecktonPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [expandedIssue, setExpandedIssue] = useState<string | null>(null);
   const [expandedPolicy, setExpandedPolicy] = useState<string | null>(null);
+
+  const [mapFilter, setMapFilter] = useState("all");
   const b = BECKTON_BRIEFING;
   const issues = BECKTON_ANALYSIS.issues;
   const voices = BECKTON_ANALYSIS.voices;
@@ -54,30 +57,55 @@ export default function BecktonPage() {
             </p>
             <p style={{ fontSize: 14, color: "#404040", lineHeight: 1.6, marginBottom: 24 }}>{b.summary}</p>
 
-            {/* Map with real boundaries */}
+            {/* Civic map — every place mentioned in interviews */}
             <div style={{ marginBottom: 24 }}>
-              <div style={{ display: "flex", gap: 12, marginBottom: 8 }}>
-                <span style={{ fontSize: 11, color: "#6B6B6B", display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 12, height: 2, background: "#C41E1E", display: "inline-block" }} /> Ward
-                </span>
-                <span style={{ fontSize: 11, color: "#6B6B6B", display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 12, height: 2, background: "#6B6B6B", display: "inline-block", borderTop: "1px dashed #6B6B6B" }} /> Constituency
-                </span>
-                <span style={{ fontSize: 11, color: "#6B6B6B", display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#C41E1E", display: "inline-block" }} /> Interview
+              {/* Filter + legend */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[
+                    { key: "all", label: "All", color: "#1A1A1A" },
+                    { key: "negative", label: "Issues", color: "#C41E1E" },
+                    { key: "positive", label: "Positive", color: "#1B7A4A" },
+                    { key: "nostalgic", label: "Memory", color: "#6B6B6B" },
+                  ].map((f) => (
+                    <button key={f.key} onClick={() => setMapFilter(f.key)} style={{
+                      fontSize: 11, padding: "3px 10px", cursor: "pointer", borderRadius: 0,
+                      background: mapFilter === f.key ? f.color : "transparent",
+                      color: mapFilter === f.key ? "#FFF" : f.color,
+                      border: `1px solid ${mapFilter === f.key ? f.color : "#E0E0E0"}`,
+                    }}>
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+                <span className="font-mono" style={{ fontSize: 11, color: "#B3B3B3" }}>
+                  {BECKTON_MAP_SUMMARY.totalMentions} place mentions from {voices.length} interviews
                 </span>
               </div>
-              <div style={{ height: 350, border: "1px solid #E0E0E0" }}>
-                <AreaMap />
+
+              <div style={{ height: 420, border: "1px solid #E0E0E0" }}>
+                <CivicMap points={BECKTON_MAP_POINTS} filter={mapFilter} />
               </div>
+
               <p className="font-mono" style={{ fontSize: 11, color: "#B3B3B3", marginTop: 4 }}>
-                Boundaries: ONS Open Geography Portal (May 2024). Interview pins randomised ~100m.
+                Click any dot to see what was said. Public places shown at real locations. Residential interviews randomised for privacy.
+              </p>
+            </div>
+
+            {/* ── SECTION: From interviews ── */}
+            <div style={{ borderTop: "2px solid #C41E1E", paddingTop: 16, marginBottom: 32 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                <p style={{ fontSize: 14, fontWeight: 500 }}>From interviews</p>
+                <span className="font-mono" style={{ fontSize: 11, color: "#6B6B6B" }}>{voices.length} conversations · field research</span>
+              </div>
+              <p style={{ fontSize: 12, color: "#6B6B6B", marginBottom: 12 }}>
+                These issues and quotes come directly from recorded conversations with residents. Anonymised, GPS-randomised, consent given.
               </p>
             </div>
 
             {/* Top issues */}
             <div style={{ marginBottom: 24 }}>
-              <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Top issues from {voices.length} interviews</p>
+              <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Top issues raised</p>
               {issues.slice(0, 3).map((issue) => (
                 <div key={issue.id} style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
                   <span className="font-mono" style={{ fontSize: 12, color: "#C41E1E" }}>{issue.score.frequency}×</span>
@@ -100,6 +128,17 @@ export default function BecktonPage() {
                 </cite>
               </blockquote>
             )}
+
+            {/* ── SECTION: Open data ── */}
+            <div style={{ borderTop: "2px solid #1A1A1A", paddingTop: 16, marginBottom: 32 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                <p style={{ fontSize: 14, fontWeight: 500 }}>Open data</p>
+                <span className="font-mono" style={{ fontSize: 11, color: "#6B6B6B" }}>official sources · APIs · public records</span>
+              </div>
+              <p style={{ fontSize: 12, color: "#6B6B6B", marginBottom: 12 }}>
+                This data comes from official government APIs and public datasets. Every value links to its source.
+              </p>
+            </div>
 
             {/* Governing bodies */}
             <div style={{ marginBottom: 24 }}>
