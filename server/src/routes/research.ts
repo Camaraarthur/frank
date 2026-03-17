@@ -7,6 +7,8 @@
 import { Router } from "express";
 import { generateText } from "../gemini.js";
 import { researchArea, braveSearch } from "../brave.js";
+import { getAllCivicData } from "../civic-data.js";
+import { getAirQuality, findInterviewLocations } from "../google-apis.js";
 
 const router = Router();
 
@@ -46,25 +48,119 @@ router.post("/area", async (req, res) => {
   if (!area) return res.status(400).json({ error: "area is required" });
 
   try {
-    // Step 1: Brave search — parallel queries for this area
-    // Include specific governance queries to build complete hierarchy
-    const [searchContext, govContext] = await Promise.all([
+    const year = new Date().getFullYear();
+    console.log(`[Research] Starting comprehensive research for: ${area}`);
+
+    // Step 1: Run EVERYTHING in parallel — APIs + Brave Search + Google
+    // Brave Search runs ALWAYS, not as fallback
+    const [
+      searchContext,
+      govSearchResults,
+      civicData,
+      airQuality,
+      places,
+    ] = await Promise.all([
+      // General area research via Brave
       researchArea(area),
+      // Governance-specific Brave searches
       Promise.all([
-        braveSearch(`"${area}" complete list elected officials representatives ${new Date().getFullYear()}`, 5),
-        braveSearch(`"${area}" mayor city council board supervisors aldermen ${new Date().getFullYear()}`, 5),
-        braveSearch(`"${area}" state governor senator representative congress ${new Date().getFullYear()}`, 5),
-        braveSearch(`"${area}" school board district attorney sheriff police chief ${new Date().getFullYear()}`, 5),
-        braveSearch(`"${area}" planning commission transport authority local agencies ${new Date().getFullYear()}`, 3),
-      ]).then(results => {
-        return results.flat().map(r => `[${r.title}] ${r.description} (${r.url})`).join("\n");
-      }),
+        braveSearch(`"${area}" elected officials current ${year}`, 5),
+        braveSearch(`"${area}" mayor council president chair ${year}`, 5),
+        braveSearch(`"${area}" governor senator representative MP ${year}`, 5),
+        braveSearch(`"${area}" school board district attorney sheriff ${year}`, 3),
+        braveSearch(`"${area}" official government website .gov`, 3),
+        braveSearch(`"${area}" council meeting minutes decisions transparency`, 3),
+      ]).then(results => results.flat()),
+      // Structured API data (UK postcodes, Parliament, Census, IMD)
+      // Try to geocode and get civic data
+      (async () => {
+        try {
+          const geoRes = await fetch(`http://localhost:4742/api/geocode/search?q=${encodeURIComponent(area)}`);
+          const geoData = await geoRes.json() as any;
+          const result = geoData?.results?.[0];
+          if (!result) return null;
+          // Try reverse to get postcode
+          const revRes = await fetch(`http://localhost:4742/api/geocode/reverse?lat=${result.lat}&lng=${result.lng}`);
+          const revData = await revRes.json() as any;
+          const postcode = revData?.address?.postcode;
+          if (postcode) {
+            return getAllCivicData({ postcode });
+          }
+          return getAllCivicData({ lat: result.lat, lng: result.lng });
+        } catch { return null; }
+      })(),
+      // Air quality
+      (async () => {
+        try {
+          const geoRes = await fetch(`http://localhost:4742/api/geocode/search?q=${encodeURIComponent(area)}`);
+          const geo = await geoRes.json() as any;
+          const r = geo?.results?.[0];
+          if (!r) return null;
+          return getAirQuality(r.lat, r.lng);
+        } catch { return null; }
+      })(),
+      // Nearby places for interview locations
+      (async () => {
+        try {
+          const geoRes = await fetch(`http://localhost:4742/api/geocode/search?q=${encodeURIComponent(area)}`);
+          const geo = await geoRes.json() as any;
+          const r = geo?.results?.[0];
+          if (!r) return null;
+          return findInterviewLocations(r.lat, r.lng);
+        } catch { return null; }
+      })(),
     ]);
 
-    // Step 2: Gemini synthesises into structured briefing
+    // Build a comprehensive context string with ALL data for Gemini
+    const govContext = govSearchResults.map(r => `[${r.title}] ${r.description} (${r.url})`).join("\n");
+
+    // Format API data as context
+    let apiContext = "";
+    if (civicData) {
+      if (civicData.representatives?.length > 0) {
+        apiContext += "\n\nVERIFIED REPRESENTATIVES (from official API):\n";
+        civicData.representatives.forEach(r => {
+          apiContext += `- ${r.name.value} (${r.party.value}) — ${r.constituency.value} [source: ${r.name.source}]\n`;
+        });
+      }
+      if (civicData.census?.length > 0) {
+        apiContext += "\n\nCENSUS DATA (from official API):\n";
+        civicData.census.forEach(t => {
+          apiContext += `${t.topic}: total ${t.total}\n`;
+          t.breakdown.slice(0, 5).forEach(b => {
+            apiContext += `  - ${b.category}: ${b.count}\n`;
+          });
+        });
+      }
+      if (civicData.deprivation?.imdDecile) {
+        apiContext += `\n\nDEPRIVATION: IMD Decile ${civicData.deprivation.imdDecile.value}/10, Rank ${civicData.deprivation.imdRank?.value}/33755\n`;
+      }
+    }
+    if (airQuality) {
+      apiContext += `\n\nAIR QUALITY: AQI ${airQuality.aqi} (${airQuality.category}), dominant pollutant: ${airQuality.dominantPollutant}\n`;
+    }
+
+    // Format interview locations from Google Places
+    let placesContext = "";
+    if (places) {
+      const allPlaces = [
+        ...((places.communitySpaces || []).map(p => ({ ...p, type: "community centre" }))),
+        ...((places.religiousSpaces || []).map(p => ({ ...p, type: "religious space" }))),
+        ...((places.markets || []).map(p => ({ ...p, type: "market/shop" }))),
+        ...((places.parks || []).map(p => ({ ...p, type: "park" }))),
+        ...((places.cafes || []).map(p => ({ ...p, type: "cafe" }))),
+      ];
+      if (allPlaces.length > 0) {
+        placesContext = "\n\nREAL NEARBY PLACES (from Google Places API):\n";
+        allPlaces.slice(0, 15).forEach(p => {
+          placesContext += `- ${p.name} (${p.type}) — ${p.address}\n`;
+        });
+      }
+    }
+
     const hasSearch = searchContext.trim().length > 0;
     const searchSection = hasSearch
-      ? `SEARCH RESULTS:\n${searchContext}\n\nBased on the search results above, produce`
+      ? `WEB SEARCH RESULTS:\n${searchContext}\n\nGOVERNANCE SEARCH RESULTS:\n${govContext}${apiContext}${placesContext}\n\nUsing ALL the data above, produce`
       : `Using your knowledge, produce`;
 
     const prompt = `You are a civic intelligence researcher${hasSearch ? " synthesising web search results into a structured area briefing" : " producing a structured area briefing"}.
@@ -134,84 +230,29 @@ Other requirements:
 
     const briefing = JSON.parse(jsonText) as AreaBriefing;
 
-    // Step 3: Verify AND enrich governing bodies via Brave Search
-    // Bad information is worse than no information — verify every name
+    // Step 3: Enrich governing bodies — find official URLs and verify via Brave
+    // The data is already good because Gemini had real search results + API data
+    // Now just find official URLs for each body
     if (briefing.governingBodies?.length > 0) {
-      const year = new Date().getFullYear();
-      const verified = await Promise.all(
+      const enriched = await Promise.all(
         briefing.governingBodies.map(async (gov) => {
-          // Clean up any (verify) or (unverified) tags from Gemini
+          // Clean any leftover tags
           gov.representative = (gov.representative || "").replace(/\s*\((?:un)?verified?\)/gi, "").trim();
-          if (!gov.representative || gov.representative === "null") return gov;
 
           try {
-            // Strategy 1: Search for the person + role directly
-            const results = await braveSearch(`"${gov.representative}" ${gov.name} ${year}`, 3);
-            const nameWords = gov.representative.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-
-            const nameInResults = results.some((r) => {
-              const text = (r.title + " " + r.description).toLowerCase();
-              return nameWords.filter(w => text.includes(w)).length >= Math.min(2, nameWords.length);
-            });
-
-            if (nameInResults) {
-              // Found — extract source URL and try to find term dates
-              const bestUrl = results[0]?.url || "";
-              if (!gov.officialUrl) gov.officialUrl = bestUrl;
-              return gov;
-            }
-
-            // Strategy 2: Search for who currently holds this position
-            const roleWord = gov.level === "national" ? "president prime minister" :
-              gov.level === "state" || gov.level === "regional" ? "governor president" :
-              gov.level === "county" ? "president chair" : "mayor president chair";
-            const correctionResults = await braveSearch(
-              `current ${roleWord} "${gov.name}" ${year}`, 5
-            );
-
-            if (correctionResults.length > 0) {
-              // Ask Gemini to extract the correct name with term dates
-              const extractPrompt = `From these search results, who is the CURRENT leader/representative of "${gov.name}" as of ${year}?
-
-Return ONLY JSON (no markdown): {"name": "full name", "party": "party or null", "termStart": "YYYY-MM-DD or YYYY", "termEnd": "YYYY-MM-DD or YYYY or null if ongoing", "source": "best URL"}
-If truly unclear, return: {"name": null}
-
-Results:
-${correctionResults.slice(0, 4).map(r => `[${r.title}] ${r.description} (${r.url})`).join("\n")}`;
-
-              const extracted = await generateText(extractPrompt);
-              const match = extracted.match(/\{[\s\S]*?\}/);
-              if (match) {
-                const parsed = JSON.parse(match[0]);
-                if (parsed.name && parsed.name !== "null") {
-                  gov.representative = parsed.name;
-                  if (parsed.party) gov.party = parsed.party;
-                  if (parsed.termStart) {
-                    const start = parsed.termStart;
-                    const end = parsed.termEnd || "present";
-                    gov.termDates = `${start} – ${end}`;
-                  }
-                  if (parsed.source) gov.officialUrl = parsed.source;
-                  return gov;
-                }
+            // Find official URL if not already set
+            if (!gov.officialUrl) {
+              const results = await braveSearch(`"${gov.name}" official website`, 2);
+              if (results.length > 0) {
+                gov.officialUrl = results[0].url;
               }
             }
+          } catch { /* continue */ }
 
-            // Strategy 3: If still can't verify, try one more with different phrasing
-            const lastTry = await braveSearch(`${gov.name} official website elected representative ${year}`, 3);
-            if (lastTry.length > 0) {
-              gov.officialUrl = lastTry[0]?.url || gov.officialUrl;
-            }
-
-            // If we still have the original name but couldn't verify, keep it but note the source
-            // Don't say "unverified" — just don't add a verification badge
-            return gov;
-          } catch {
-            return gov;
-          }
+          return gov;
         })
       );
-      briefing.governingBodies = verified;
+      briefing.governingBodies = enriched;
     }
 
     res.json(briefing);
