@@ -55,7 +55,7 @@ export interface CensusTopicData {
   source: string;
   sourceUrl: string;
   total: number | null;
-  breakdown: Array<{ category: string; count: number }>;
+  breakdown: Array<{ category: string; count: number; percentage?: number }>;
 }
 
 export interface CivicAreaData {
@@ -735,6 +735,116 @@ export async function getLGInformData(_areaCode: string): Promise<null> {
 // Master orchestrator — get all civic data for a location
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// US Civic Data — representatives via Google Civic Information API
+// ---------------------------------------------------------------------------
+
+async function getUSRepresentatives(address: string): Promise<Representative[]> {
+  try {
+    // Google Civic Information API — free, no key required for representatives
+    const url = `https://www.googleapis.com/civicinfo/v2/representatives?address=${encodeURIComponent(address)}&key=${process.env.GEMINI_API_KEY || ""}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = await res.json() as any;
+
+    const reps: Representative[] = [];
+    const offices = data.offices || [];
+    const officials = data.officials || [];
+
+    for (const office of offices) {
+      for (const idx of office.officialIndices || []) {
+        const official = officials[idx];
+        if (!official) continue;
+        reps.push({
+          name: { value: official.name, source: "Google Civic Information API", sourceUrl: `https://www.googleapis.com/civicinfo/v2/representatives?address=${encodeURIComponent(address)}` },
+          party: { value: official.party || "Unknown", source: "Google Civic Information API", sourceUrl: "" },
+          constituency: { value: office.name, source: "Google Civic Information API", sourceUrl: "" },
+          thumbnailUrl: { value: official.photoUrl || null, source: "Google Civic Information API", sourceUrl: "" },
+          profileUrl: { value: official.urls?.[0] || "", source: "Google Civic Information API", sourceUrl: official.urls?.[0] || "" },
+          house: { value: office.levels?.[0] || "unknown", source: "Google Civic Information API", sourceUrl: "" },
+        });
+      }
+    }
+    return reps;
+  } catch {
+    return [];
+  }
+}
+
+// US Census Bureau — basic demographics by lat/lng
+async function getUSCensusData(lat: number, lng: number): Promise<CensusTopicData[]> {
+  try {
+    // Get FIPS codes from FCC API (free, no key)
+    const fccRes = await fetch(`https://geo.fcc.gov/api/census/block/find?latitude=${lat}&longitude=${lng}&format=json`);
+    if (!fccRes.ok) return [];
+    const fcc = await fccRes.json() as Record<string, Record<string, string>>;
+
+    const state = fcc.State?.FIPS;
+    const county = fcc.County?.FIPS;
+    const stateName = fcc.State?.name || "Unknown";
+    const countyName = fcc.County?.name || "Unknown";
+
+    if (!state || !county) return [];
+
+    // US Census ACS 5-year population data
+    const censusUrl = `https://api.census.gov/data/2022/acs/acs5?get=B01003_001E,B02001_002E,B02001_003E,B02001_005E,B03003_003E,B19013_001E&for=county:${county.slice(2)}&in=state:${state}`;
+    const censusRes = await fetch(censusUrl);
+    if (!censusRes.ok) return [];
+    const censusData = await censusRes.json() as string[][];
+
+    if (censusData.length < 2) return [];
+    const vals = censusData[1];
+
+    const totalPop = parseInt(vals[0]) || 0;
+    const white = parseInt(vals[1]) || 0;
+    const black = parseInt(vals[2]) || 0;
+    const asian = parseInt(vals[3]) || 0;
+    const hispanic = parseInt(vals[4]) || 0;
+    const medianIncome = parseInt(vals[5]) || 0;
+
+    const topics: CensusTopicData[] = [];
+
+    if (totalPop > 0) {
+      topics.push({
+        topic: `Population — ${countyName}, ${stateName}`,
+        source: "US Census Bureau ACS 5-Year (2022)",
+        sourceUrl: "https://data.census.gov",
+        total: totalPop,
+        breakdown: [
+          { category: "White", count: white, percentage: (white / totalPop) * 100 },
+          { category: "Black or African American", count: black, percentage: (black / totalPop) * 100 },
+          { category: "Asian", count: asian, percentage: (asian / totalPop) * 100 },
+          { category: "Hispanic or Latino", count: hispanic, percentage: (hispanic / totalPop) * 100 },
+          { category: "Other", count: totalPop - white - black - asian - hispanic, percentage: ((totalPop - white - black - asian - hispanic) / totalPop) * 100 },
+        ].filter(b => b.count > 0),
+      });
+    }
+
+    if (medianIncome > 0) {
+      topics.push({
+        topic: `Household Income — ${countyName}, ${stateName}`,
+        source: "US Census Bureau ACS 5-Year (2022)",
+        sourceUrl: "https://data.census.gov",
+        total: medianIncome,
+        breakdown: [
+          { category: "Median household income", count: medianIncome, percentage: 100 },
+        ],
+      });
+    }
+
+    return topics;
+  } catch {
+    return [];
+  }
+}
+
+// Detect if a location is in the US based on lat/lng
+function isUSLocation(lat: number, lng: number): boolean {
+  // Continental US rough bounds
+  return lat > 24 && lat < 50 && lng > -125 && lng < -66;
+}
+
 export async function getAllCivicData(opts: {
   lat?: number;
   lng?: number;
@@ -764,9 +874,29 @@ export async function getAllCivicData(opts: {
     return result;
   }
 
+  // If postcodes.io fails and we have lat/lng, try US path
+  if (!pcData && opts.lat != null && opts.lng != null && isUSLocation(opts.lat, opts.lng)) {
+    errors.length = 0; // Clear UK-specific errors
+
+    // US location — use Google Civic + US Census
+    const address = opts.postcode || `${opts.lat},${opts.lng}`;
+    const [usReps, usCensus] = await Promise.all([
+      getUSRepresentatives(address).catch(() => []),
+      getUSCensusData(opts.lat, opts.lng).catch(() => []),
+    ]);
+
+    result.representatives = usReps;
+    result.census = usCensus;
+
+    if (usReps.length === 0) errors.push("Could not find US representatives for this location");
+    if (usCensus.length === 0) errors.push("Could not find US Census data for this location");
+
+    return result;
+  }
+
   if (!pcData) return result;
 
-  // Step 2: Build geography
+  // Step 2: Build geography (UK)
   result.geography = buildGeography(pcData);
 
   // Step 3: Parallel fetches for representatives, census, deprivation

@@ -25,6 +25,7 @@ import analyzeRouter from "./routes/analyze.js";
 import policyRouter from "./routes/policy.js";
 import exportRouter from "./routes/export.js";
 import areaDataRouter from "./routes/area-data.js";
+import googleDataRouter from "./routes/google-data.js";
 
 // ---------------------------------------------------------------------------
 // App setup
@@ -57,6 +58,7 @@ app.use("/api/analyze", analyzeRouter);
 app.use("/api/policy", policyRouter);
 app.use("/api/export", exportRouter);
 app.use("/api/area-data", areaDataRouter);
+app.use("/api/google", googleDataRouter);
 
 // GIS proxy — forward /api/gis/* to the GIS backend on port 4742
 app.use("/api/gis", async (req, res) => {

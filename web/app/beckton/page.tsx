@@ -105,15 +105,46 @@ export default function BecktonPage() {
             <div style={{ marginBottom: 24 }}>
               <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Who governs</p>
               <div style={{ borderTop: "1px solid #E0E0E0" }}>
-                {b.governingBodies.map((gov, i) => (
-                  <div key={i} style={{ padding: "8px 0", borderBottom: "1px solid #E0E0E0" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 14, fontWeight: 500 }}>{gov.name}</span>
-                      <span className="font-mono" style={{ fontSize: 11, color: "#6B6B6B" }}>{gov.level}</span>
+                {b.governingBodies.map((gov, i) => {
+                  // Calculate time in office from termDates if available
+                  const termDates = (gov as Record<string, unknown>).termDates as string | undefined;
+                  const officialUrl = (gov as Record<string, unknown>).officialUrl as string | undefined;
+
+                  let timeInOffice = "";
+                  if (termDates) {
+                    const startMatch = termDates.match(/(\d{4})/);
+                    if (startMatch) {
+                      const startYear = parseInt(startMatch[1]);
+                      const years = new Date().getFullYear() - startYear;
+                      const months = new Date().getMonth();
+                      if (years > 0) timeInOffice = `${years}y ${months}m in office`;
+                      else timeInOffice = `${months}m in office`;
+                    }
+                  }
+
+                  return (
+                    <div key={i} style={{ padding: "8px 0", borderBottom: "1px solid #E0E0E0" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                        <span style={{ fontSize: 14, fontWeight: 500 }}>
+                          {officialUrl ? (
+                            <a href={officialUrl} target="_blank" rel="noopener" style={{ color: "#1A1A1A", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                              {gov.name}
+                            </a>
+                          ) : gov.name}
+                        </span>
+                        <span className="font-mono" style={{ fontSize: 11, color: "#6B6B6B" }}>{gov.level}</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: "#404040" }}>
+                        {gov.representative}{gov.party ? ` (${gov.party})` : ""}
+                      </p>
+                      {(termDates || timeInOffice) && (
+                        <p className="font-mono" style={{ fontSize: 11, color: "#B3B3B3" }}>
+                          {termDates}{timeInOffice ? ` · ${timeInOffice}` : ""}
+                        </p>
+                      )}
                     </div>
-                    <p style={{ fontSize: 13, color: "#6B6B6B" }}>{gov.representative}{gov.party ? ` (${gov.party})` : ""}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -234,9 +265,17 @@ export default function BecktonPage() {
                       </p>
 
                       {p.sources?.length > 0 && (
-                        <p className="font-mono" style={{ fontSize: 11, color: "#B3B3B3" }}>
-                          Sources: {p.sources.join(" · ")}
-                        </p>
+                        <div style={{ marginTop: 8 }}>
+                          <p className="font-mono" style={{ fontSize: 11, color: "#6B6B6B", marginBottom: 4 }}>Sources:</p>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
+                            {p.sources.map((src, si) => (
+                              <a key={si} href={`https://www.google.com/search?q=${encodeURIComponent(src)}`} target="_blank" rel="noopener"
+                                style={{ fontSize: 11, color: "#C41E1E", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                                {src}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}

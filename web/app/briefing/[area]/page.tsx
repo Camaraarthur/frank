@@ -52,12 +52,39 @@ export default function BriefingPage() {
     }
 
     async function load() {
-      // Step 1: Geocode
+      // Step 1: Geocode — try Google first (better at informal names), fall back to Nominatim
       updateStep("geocode", { status: "loading", detail: `Searching for "${areaName}"...` });
       try {
-        const geoRes = await fetch(`/api/gis/geocode/search?q=${encodeURIComponent(areaName)}`);
-        const geoData = await geoRes.json();
-        const result = geoData.results?.[0];
+        // Try Google Geocoding first (handles "sf north" → "North Beach, San Francisco" better)
+        let result: { lat: number; lng: number; display_name?: string; address?: Record<string, string>; types?: string[]; formattedAddress?: string } | null = null;
+
+        try {
+          const googleRes = await fetch(`/api/google/geocode?q=${encodeURIComponent(areaName)}`);
+          const googleData = await googleRes.json();
+          const gr = googleData.results?.[0];
+          if (gr) {
+            result = {
+              lat: gr.lat,
+              lng: gr.lng,
+              display_name: gr.formattedAddress,
+              formattedAddress: gr.formattedAddress,
+              types: gr.types,
+              address: {},
+            };
+            // Parse formatted address into components
+            const parts = (gr.formattedAddress || "").split(",").map((s: string) => s.trim());
+            if (parts.length >= 2) {
+              result.address = { suburb: parts[0], city: parts[1], city_district: parts[1] };
+            }
+          }
+        } catch { /* fall back to Nominatim */ }
+
+        // Fall back to Nominatim if Google didn't work
+        if (!result) {
+          const geoRes = await fetch(`/api/gis/geocode/search?q=${encodeURIComponent(areaName)}`);
+          const geoData = await geoRes.json();
+          result = geoData.results?.[0] || null;
+        }
 
         if (result) {
           // Try to get postcode from reverse geocode
@@ -86,6 +113,19 @@ export default function BriefingPage() {
             lng: result.lng,
           };
           setGeo(geoResult);
+
+          // Build canonical name and redirect if different from what user typed
+          const canonicalName = geoResult.adminDistrict
+            ? `${geoResult.ward}, ${geoResult.adminDistrict}`
+            : geoResult.ward;
+          const canonicalSlug = encodeURIComponent(canonicalName.toLowerCase().replace(/\s+/g, "-"));
+
+          if (canonicalSlug !== areaSlug && canonicalName.toLowerCase() !== areaName.toLowerCase()) {
+            // Redirect to the canonical URL
+            router.replace(`/briefing/${canonicalSlug}`);
+            return;
+          }
+
           updateStep("geocode", {
             status: "done",
             detail: `${geoResult.ward}${geoResult.adminDistrict ? `, ${geoResult.adminDistrict}` : ""}${postcode ? ` (${postcode})` : ""}`,
@@ -93,9 +133,9 @@ export default function BriefingPage() {
 
           // Step 2: Civic data (loads in CivicDataPanel component)
           if (postcode) {
-            updateStep("civic", { status: "done", detail: `Postcode ${postcode} — loading live data below` });
+            updateStep("civic", { status: "done", detail: `Found ${postcode} — loading representatives, demographics, deprivation data` });
           } else {
-            updateStep("civic", { status: "done", detail: "No postcode found — civic data requires a UK postcode" });
+            updateStep("civic", { status: "done", detail: `Using worldwide data sources (Wikidata, World Bank, Google APIs)` });
           }
         } else {
           updateStep("geocode", { status: "done", detail: `Found: ${areaName}` });
@@ -154,10 +194,10 @@ export default function BriefingPage() {
         </div>
 
         {/* Civic data — loads immediately if we have a postcode */}
-        {geo?.postcode && (
+        {geo && (
           <section style={{ marginBottom: 32 }}>
             <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>Official data</p>
-            <CivicDataPanel postcode={geo.postcode} />
+            <CivicDataPanel postcode={geo.postcode || undefined} lat={geo.lat} lng={geo.lng} />
           </section>
         )}
 
