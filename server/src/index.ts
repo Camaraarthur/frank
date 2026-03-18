@@ -27,6 +27,7 @@ import exportRouter from "./routes/export.js";
 import areaDataRouter from "./routes/area-data.js";
 import googleDataRouter from "./routes/google-data.js";
 import commentsRouter from "./routes/comments.js";
+import deepResearchRouter from "./routes/deep-research.js";
 import { getDb } from "./db.js";
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,7 @@ app.use("/api/export", exportRouter);
 app.use("/api/area-data", areaDataRouter);
 app.use("/api/google", googleDataRouter);
 app.use("/api/comments", commentsRouter);
+app.use("/api/deep-research", deepResearchRouter);
 
 // GIS proxy — forward /api/gis/* to the GIS backend on port 4742
 app.use("/api/gis", async (req, res) => {

@@ -79,4 +79,32 @@ router.patch("/:id", async (req, res) => {
   res.json(updated);
 });
 
+// GET /api/sessions/:id/download/transcript — download transcript as text file
+router.get("/:id/download/transcript", async (req, res) => {
+  const session = await getSession(req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+
+  const lines = session.transcript.map((t) => {
+    const mins = Math.floor(t.offsetMs / 60000);
+    const secs = Math.floor((t.offsetMs % 60000) / 1000);
+    return `[${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}] ${t.text}`;
+  });
+
+  const header = `Frank Interview Transcript\nArea: ${session.area}\nDate: ${new Date(session.createdAt).toISOString().slice(0, 10)}\nDuration: ${Math.floor(session.durationSeconds / 60)}m ${session.durationSeconds % 60}s\n${"=".repeat(50)}\n\n`;
+
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="frank-transcript-${session.id.slice(0, 8)}.txt"`);
+  res.send(header + lines.join("\n"));
+});
+
+// GET /api/sessions/:id/download/json — download full session as JSON
+router.get("/:id/download/json", async (req, res) => {
+  const session = await getSession(req.params.id);
+  if (!session) return res.status(404).json({ error: "Session not found" });
+
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Disposition", `attachment; filename="frank-session-${session.id.slice(0, 8)}.json"`);
+  res.json(session);
+});
+
 export default router;
