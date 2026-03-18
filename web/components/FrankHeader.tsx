@@ -19,7 +19,7 @@ export function FrankHeader({ area, section, showRecord = true }: FrankHeaderPro
     if (!q) return;
     setSearching(false);
     setQuery("");
-    router.push(`/briefing/${encodeURIComponent(q.toLowerCase().replace(/\s+/g, "-"))}`);
+    router.push(`/${encodeURIComponent(q.toLowerCase().replace(/\s+/g, "-"))}`);
   }
 
   return (
@@ -72,19 +72,39 @@ export function FrankHeader({ area, section, showRecord = true }: FrankHeaderPro
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, marginLeft: 12 }}>
-        {!searching && (
+        {!searching && area && (
           <button onClick={() => router.push("/")}
             style={{ fontSize: 13, color: "#6B6B6B", background: "none", border: "none", cursor: "pointer" }}>
             What is Frank?
           </button>
         )}
-        {showRecord && area && !searching && (
+        {!searching && (
           <button
-            onClick={() => router.push(`/record?area=${encodeURIComponent(area)}`)}
-            style={{ fontSize: 13, color: "#C41E1E", background: "none", border: "1px solid #E0E0E0", padding: "6px 16px", cursor: "pointer", borderRadius: 0, display: "flex", alignItems: "center", gap: 6 }}
+            onClick={() => {
+              if (area) {
+                router.push(`/record?area=${encodeURIComponent(area)}`);
+              } else {
+                // No area context — ask for GPS
+                navigator.geolocation?.getCurrentPosition(
+                  async (pos) => {
+                    try {
+                      const res = await fetch(`/api/gis/geocode/reverse?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+                      const data = await res.json();
+                      const name = data.address?.suburb || data.address?.city_district || data.address?.town || data.address?.city || "your area";
+                      router.push(`/record?area=${encodeURIComponent(name)}`);
+                    } catch {
+                      router.push("/record?area=your+area");
+                    }
+                  },
+                  () => router.push("/record?area=your+area"),
+                  { timeout: 5000 }
+                );
+              }
+            }}
+            style={{ fontSize: 13, color: "#C41E1E", background: "none", border: "1px solid #E0E0E0", padding: "10px 16px", cursor: "pointer", borderRadius: 0, display: "flex", alignItems: "center", gap: 6, minHeight: 44 }}
           >
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#C41E1E", display: "inline-block" }} />
-            Record voices
+            Record
           </button>
         )}
       </div>

@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MicButton } from "@/components/record/MicButton";
 import { createSession, addTranscriptEntry, updateSession } from "@/lib/api";
 import { Suspense } from "react";
+import dynamic from "next/dynamic";
+
+const LiveLocationMap = dynamic(() => import("@/components/LiveLocationMap").then(m => m.LiveLocationMap), { ssr: false });
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0");
@@ -99,7 +102,7 @@ function RecordContent() {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
 
-  // Request GPS
+  // Request GPS — auto-request on mount
   function requestGPS() {
     setGpsStatus("loading");
     navigator.geolocation?.getCurrentPosition(
@@ -111,6 +114,11 @@ function RecordContent() {
       { timeout: 8000 }
     );
   }
+
+  // Auto-request GPS on mount
+  useEffect(() => {
+    requestGPS();
+  }, []);
 
   async function startRecording() {
     if (!consentGiven) {
@@ -337,6 +345,11 @@ function RecordContent() {
           {error}
         </div>
       )}
+
+      {/* Live location map */}
+      <div style={{ height: 200, width: "100%" }}>
+        <LiveLocationMap lat={gps?.lat ?? null} lng={gps?.lng ?? null} isRecording={isRecording} />
+      </div>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">

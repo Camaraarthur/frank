@@ -15,7 +15,7 @@ export default function HomePage() {
   function go() {
     const q = query.trim();
     if (!q) return;
-    router.push(`/briefing/${encodeURIComponent(q.toLowerCase().replace(/\s+/g, "-"))}`);
+    router.push(`/${encodeURIComponent(q.toLowerCase().replace(/\s+/g, "-"))}`);
   }
 
   const topIssue = BECKTON_ANALYSIS.issues[0];
@@ -60,7 +60,7 @@ export default function HomePage() {
           <p style={{ fontSize: 12, color: "#B3B3B3", textAlign: "center", marginBottom: 8 }}>or click anywhere on the map</p>
           <ClickableMap onLocationSelect={(lat, lng, name) => {
             const slug = encodeURIComponent(name.toLowerCase().replace(/\s+/g, "-"));
-            router.push(`/briefing/${slug}`);
+            router.push(`/${slug}`);
           }} />
         </section>
 
@@ -76,11 +76,11 @@ export default function HomePage() {
           <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 20, textAlign: "center" }}>How it works</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
-              { icon: "1", title: "Research", desc: "Type any area. Frank pulls real representatives, demographics, deprivation data, air quality — from 16 official sources. Every number cited.", color: "#1A1A1A" },
-              { icon: "2", title: "Prepare", desc: "AI generates an interview guide. A chat helps you refine your approach. Ask about burdens, not opinions.", color: "#404040" },
-              { icon: "3", title: "Listen", desc: "Record conversations on your phone. On-device transcription. GPS randomised for privacy. Consent per-conversation.", color: "#404040" },
-              { icon: "4", title: "Understand", desc: "AI ranks issues by severity, frequency, cost, complexity. Identifies root causes. Every finding traces to anonymised quotes.", color: "#404040" },
-              { icon: "5", title: "Act", desc: "Policy proposals with costs, drawbacks, evidence of what worked elsewhere, who to contact. Published publicly.", color: "#C41E1E" },
+              { icon: "1", title: "See what's really happening", desc: "Type any area. See who governs it, what the data says, what people are dealing with. A living picture of a place, cited from official sources.", color: "#1A1A1A" },
+              { icon: "2", title: "Go talk to people", desc: "Frank teaches you how to ask questions that surface what actually matters. Not surveys. Real conversations, recorded with consent.", color: "#404040" },
+              { icon: "3", title: "Make it visible", desc: "Everything people said becomes a public page. Quoted, anonymised, mapped. The community speaks for itself.", color: "#404040" },
+              { icon: "4", title: "Connect to evidence", desc: "Every issue links to what's been tried elsewhere, what worked, what didn't, at what cost. Grounded in research, not opinion.", color: "#404040" },
+              { icon: "5", title: "Hold power accountable", desc: "The page is public. If what people need is visible and the council does nothing, that's a choice everyone can see.", color: "#C41E1E" },
             ].map((s, i) => (
               <div key={i} style={{ display: "flex", gap: 16, paddingBottom: 20, paddingLeft: 20, borderLeft: i < 4 ? "2px solid #E0E0E0" : "2px solid #C41E1E" }}>
                 <div style={{ width: 28, height: 28, borderRadius: "50%", background: s.color, color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, flexShrink: 0, marginLeft: -15, marginTop: -2 }}>
@@ -216,7 +216,7 @@ export default function HomePage() {
                 <img src="/arthur2.jpg" alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
               </div>
-              <p style={{ fontSize: 16, fontWeight: 500, marginBottom: 4 }}>Arthur Camara</p>
+              <a href="https://arthurcamara.com" target="_blank" rel="noopener" style={{ fontSize: 16, fontWeight: 500, marginBottom: 4, color: "#1A1A1A", textDecoration: "none", display: "block" }}>Arthur Camara</a>
               <p className="font-mono" style={{ fontSize: 12, color: "#C41E1E", marginBottom: 8 }}>Technical lead</p>
               <p style={{ fontSize: 13, color: "#6B6B6B", lineHeight: 1.6 }}>
                 Graduate of the Bartlett School of Architecture at UCL. Published researcher in agent-based conversation analysis (AHFE 2024). Co-founder of Insights, an AI platform for processing conversation data. Currently AI Lead at Carlo Ratti Associati. Built the entire Frank platform.
@@ -236,26 +236,9 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Bottom CTA */}
-        <section style={{ borderTop: "1px solid #E0E0E0", paddingTop: 32, textAlign: "center", marginBottom: 32 }}>
-          <p style={{ fontSize: 14, color: "#6B6B6B", marginBottom: 16 }}>Research any area in the world</p>
-          <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", gap: 8 }}>
-            <input
-              placeholder="Your area or postcode"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  const v = (e.target as HTMLInputElement).value.trim();
-                  if (v) router.push(`/briefing/${encodeURIComponent(v.toLowerCase().replace(/\s+/g, "-"))}`);
-                }
-              }}
-              style={{ flex: 1, padding: "12px 16px", fontSize: 16, border: "1px solid #E0E0E0", borderRadius: 0, outline: "none" }}
-            />
-            <button onClick={() => {}}
-              style={{ padding: "12px 24px", fontSize: 14, fontWeight: 500, background: "#1A1A1A", color: "#FFF", border: "none", cursor: "pointer", borderRadius: 0 }}>
-              Try it
-            </button>
-          </div>
-          <p style={{ fontSize: 12, color: "#B3B3B3", marginTop: 8 }}>arthur@arthurcamara.com</p>
+        {/* Contact */}
+        <section style={{ borderTop: "1px solid #E0E0E0", paddingTop: 24, textAlign: "center", marginBottom: 32 }}>
+          <p style={{ fontSize: 13, color: "#6B6B6B" }}>arthur@frank.community</p>
         </section>
       </main>
 

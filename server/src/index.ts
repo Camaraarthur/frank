@@ -26,6 +26,8 @@ import policyRouter from "./routes/policy.js";
 import exportRouter from "./routes/export.js";
 import areaDataRouter from "./routes/area-data.js";
 import googleDataRouter from "./routes/google-data.js";
+import commentsRouter from "./routes/comments.js";
+import { getDb } from "./db.js";
 
 // ---------------------------------------------------------------------------
 // App setup
@@ -59,6 +61,7 @@ app.use("/api/policy", policyRouter);
 app.use("/api/export", exportRouter);
 app.use("/api/area-data", areaDataRouter);
 app.use("/api/google", googleDataRouter);
+app.use("/api/comments", commentsRouter);
 
 // GIS proxy — forward /api/gis/* to the GIS backend on port 4742
 app.use("/api/gis", async (req, res) => {
@@ -80,6 +83,9 @@ async function startup(): Promise<void> {
   // Ensure data directory exists
   const dataDir = process.env.DATA_DIR || path.join(__dirname, "..", "data");
   await fs.mkdir(path.join(dataDir, "sessions"), { recursive: true });
+
+  // Initialize database
+  getDb();
 
   console.log("=".repeat(50));
   console.log("  Frank — Civic Field Intelligence");

@@ -11,38 +11,20 @@ export const BECKTON_BRIEFING: AreaBriefing = {
   summary:
     "Beckton is a residential suburb in the Royal Docks area of the London Borough of Newham (E6/E16), built in the 1980s on land formerly occupied by the Beckton Gas Works. It sits between the A13, the Royal Docks waterfront, and Barking. The area has a large retail park, a DLR station, and several major employers including Britvic's soft drinks factory and the Beckton Sewage Works (the largest in Europe). Since the 2012 Olympics, property prices have surged across Newham, driving out many long-term residents and bringing successive waves of new arrivals from Eastern Europe, South Asia, and the Middle East. The population turns over rapidly — one resident described it as a 'conveyor belt of changing people.' Community infrastructure has not kept pace: old community centres have closed, the former dry ski slope on the slag heap is derelict, and people describe a car-dependent neighbourhood where you shop and leave without talking to anyone.",
   governingBodies: [
+    // === THIS AREA ===
     {
-      level: "National",
-      name: "UK Parliament — West Ham and Beckton",
-      representative: "James Asser MP",
+      level: "This area",
+      name: "Beckton Ward Councillors",
+      representative: "Cllr Zuber Sheraji, Cllr Nareser Sheraji, Cllr Mumtaz Khan",
       party: "Labour",
       keyPolicies: [
-        "Housing and cost of living",
-        "src: https://members.parliament.uk/member/5211/contact",
+        "Housing, community safety, local environment",
+        "src: https://democracy.newham.gov.uk",
       ],
     },
+    // === GOVERNS THIS AREA ===
     {
-      level: "Regional",
-      name: "Greater London Authority",
-      representative: "Mayor Sadiq Khan",
-      party: "Labour",
-      keyPolicies: [
-        "Royal Docks Enterprise Zone and Good Growth Fund",
-        "src: https://www.london.gov.uk/who-we-are/mayor-london",
-      ],
-    },
-    {
-      level: "Regional (GLA)",
-      name: "London Assembly — City and East",
-      representative: "Unmesh Desai AM",
-      party: "Labour",
-      keyPolicies: [
-        "Policing and community safety",
-        "src: https://www.london.gov.uk/who-we-are/london-assembly",
-      ],
-    },
-    {
-      level: "Local",
+      level: "Borough",
       name: "London Borough of Newham",
       representative: "Mayor Rokhsana Fiaz",
       party: "Labour",
@@ -51,14 +33,35 @@ export const BECKTON_BRIEFING: AreaBriefing = {
         "src: https://www.newham.gov.uk",
       ],
     },
+    // === ABOVE ===
     {
-      level: "Local (Ward)",
-      name: "Beckton Ward — Newham Council",
-      representative: "Ward councillors (3 seats)",
+      level: "City",
+      name: "Greater London Authority",
+      representative: "Mayor Sadiq Khan",
       party: "Labour",
       keyPolicies: [
-        "Housing, community safety, local environment",
-        "src: https://democracy.newham.gov.uk",
+        "Royal Docks Enterprise Zone, GLA Good Growth Fund",
+        "src: https://www.london.gov.uk/who-we-are/mayor-london",
+      ],
+    },
+    {
+      level: "City (Assembly)",
+      name: "London Assembly — City and East",
+      representative: "Unmesh Desai AM",
+      party: "Labour",
+      keyPolicies: [
+        "Policing, community safety, housing oversight",
+        "src: https://www.london.gov.uk/who-we-are/london-assembly",
+      ],
+    },
+    {
+      level: "National",
+      name: "UK Parliament — West Ham and Beckton",
+      representative: "James Asser MP",
+      party: "Labour",
+      keyPolicies: [
+        "Housing and cost of living",
+        "src: https://members.parliament.uk/member/5211/contact",
       ],
     },
   ],

@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Sitemap: https://frank.community/sitemap.xml
+
+# Frank is open civic data — crawling welcome
+# Source code at github.com/Camaraarthur/frank

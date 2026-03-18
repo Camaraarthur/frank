@@ -81,18 +81,7 @@ export function ClickableMap({ onLocationSelect }: ClickableMapProps) {
           )}
         </MapContainer>
 
-        {/* Instruction overlay */}
-        {!pin && (
-          <div style={{
-            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            pointerEvents: "none", zIndex: 1000,
-          }}>
-            <span style={{ fontSize: 13, color: "#6B6B6B", background: "rgba(255,255,255,0.9)", padding: "6px 16px" }}>
-              Click anywhere on the map to research that area
-            </span>
-          </div>
-        )}
+        {/* Instruction — above the map, not overlaid */}
       </div>
 
       {/* Selected location bar */}

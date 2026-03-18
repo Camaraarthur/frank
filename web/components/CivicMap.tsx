@@ -27,22 +27,36 @@ function Boundaries() {
   const [ward, setWard] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [constituency, setConstituency] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [borough, setBorough] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [lsoas, setLsoas] = useState<any>(null);
 
   useEffect(() => {
     Promise.all([
       fetch("/boundaries/beckton-ward.geojson").then(r => r.json()).catch(() => null),
       fetch("/boundaries/west-ham-and-beckton-constituency.geojson").then(r => r.json()).catch(() => null),
-    ]).then(([w, c]) => {
+      fetch("/boundaries/newham-borough.geojson").then(r => r.json()).catch(() => null),
+      fetch("/boundaries/beckton-lsoas.geojson").then(r => r.json()).catch(() => null),
+    ]).then(([w, c, b, l]) => {
       setWard(w);
       setConstituency(c);
+      setBorough(b);
+      setLsoas(l);
       if (w) map.fitBounds(L.geoJSON(w).getBounds(), { padding: [20, 20] });
     });
   }, [map]);
 
   return (
     <>
-      {constituency && <GeoJSON data={constituency} style={{ color: "#B3B3B3", weight: 1, fillOpacity: 0, dashArray: "6,4" }} />}
-      {ward && <GeoJSON data={ward} style={{ color: "#1A1A1A", weight: 1.5, fillOpacity: 0.02, fillColor: "#1A1A1A" }} />}
+      {/* Outermost: Borough of Newham */}
+      {borough && <GeoJSON data={borough} style={{ color: "#B3B3B3", weight: 1, fillOpacity: 0, dashArray: "8,6" }} />}
+      {/* Constituency */}
+      {constituency && <GeoJSON data={constituency} style={{ color: "#6B6B6B", weight: 1, fillOpacity: 0, dashArray: "4,4" }} />}
+      {/* LSOAs within the ward */}
+      {lsoas && <GeoJSON data={lsoas} style={{ color: "#E0E0E0", weight: 0.5, fillOpacity: 0 }} />}
+      {/* Innermost: Beckton ward — the primary boundary */}
+      {ward && <GeoJSON data={ward} style={{ color: "#C41E1E", weight: 2.5, fillOpacity: 0.03, fillColor: "#C41E1E" }} />}
     </>
   );
 }

@@ -87,9 +87,20 @@ export default function BecktonPage() {
                 <CivicMap points={BECKTON_MAP_POINTS} filter={mapFilter} />
               </div>
 
-              <p className="font-mono" style={{ fontSize: 11, color: "#B3B3B3", marginTop: 4 }}>
-                Click any dot to see what was said. Public places shown at real locations. Residential interviews randomised for privacy.
-              </p>
+              <div className="font-mono" style={{ fontSize: 10, color: "#B3B3B3", marginTop: 6, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 16, height: 2, background: "#C41E1E", display: "inline-block" }} /> Beckton ward
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 16, height: 2, background: "#6B6B6B", display: "inline-block", borderTop: "1px dashed #6B6B6B" }} /> Constituency
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 16, height: 2, background: "#B3B3B3", display: "inline-block", borderTop: "1px dashed #B3B3B3" }} /> Newham borough
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ width: 16, height: 2, background: "#E0E0E0", display: "inline-block" }} /> LSOAs
+                </span>
+              </div>
             </div>
 
             {/* ── SECTION: From interviews ── */}

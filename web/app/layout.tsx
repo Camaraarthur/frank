@@ -1,9 +1,32 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 export const metadata: Metadata = {
-  title: "Frank — Civic Field Intelligence",
-  description: "Your community, frank about what it needs.",
+  title: "Frank — Civic intelligence powered by real conversations",
+  description: "Your community, frank about what it needs. Free, open source, works in 190+ countries. Research any area, listen to people, surface issues, generate evidence-based policy proposals.",
+  openGraph: {
+    title: "Frank — Civic intelligence powered by real conversations",
+    description: "Your community, frank about what it needs. Research any area, listen to people, surface issues.",
+    url: "https://frank.community",
+    siteName: "Frank",
+    images: [{ url: "https://frank.community/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Frank — Civic intelligence",
+    description: "Your community, frank about what it needs.",
+    images: ["https://frank.community/og-image.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -19,12 +42,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
-      <body className="antialiased" style={{ backgroundColor: "#FAF9F6", color: "#2C1D12" }}>
+      <body style={{ backgroundColor: "#FFFFFF", color: "#1A1A1A" }}>
         {children}
+        <FeedbackButton />
       </body>
     </html>
   );
