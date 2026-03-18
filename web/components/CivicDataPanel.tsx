@@ -132,15 +132,12 @@ export function CivicDataPanel({ postcode, lat, lng }: { postcode?: string; lat?
 
   return (
     <div>
-      {/* Representatives */}
-      {data.representatives.length > 0 && (
+      {/* Representatives — only show if we have a reasonable number (API result, not Wikidata dump) */}
+      {data.representatives.length > 0 && data.representatives.length <= 30 && (
         <div style={{ marginBottom: 32 }}>
           <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>Representatives</p>
-          {data.representatives.length > 20 && (
-            <p style={{ fontSize: 11, color: "#6B6B6B", marginBottom: 4 }}>Showing top 20 of {data.representatives.length} found</p>
-          )}
           <div style={{ borderTop: "1px solid #E0E0E0" }}>
-            {data.representatives.filter(r => !String(r.name.value).startsWith("Q")).slice(0, 20).map((rep, i) => (
+            {data.representatives.filter(r => !String(r.name.value).startsWith("Q")).slice(0, 15).map((rep, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "8px 0", borderBottom: "1px solid #E0E0E0" }}>
                 <div>
                   <span style={{ fontSize: 14, fontWeight: 500 }}>{String(rep.name.value)}</span>
